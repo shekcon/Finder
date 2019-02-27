@@ -3,6 +3,8 @@
 from hashlib import md5
 import os
 from argparse import ArgumentParser
+import json
+import time
 
 
 def read_args():
@@ -55,7 +57,7 @@ def find_duplicate_files(file_path_names):
 def main():
     args = read_args()
     files = scan_files(args.path)
-    duplicates = find_duplicate_files(files)
+    print(json.dumps(find_duplicate_files(files), sort_keys=True, indent=2))
 
 
 if __name__ == "__main__":
