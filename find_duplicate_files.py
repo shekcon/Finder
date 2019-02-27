@@ -4,12 +4,13 @@ from hashlib import md5
 import os
 from argparse import ArgumentParser
 
-def handle_args():
+
+def read_args():
     finder = ArgumentParser()
     finder.add_argument('-p', '--path',
-                       help="directories want to find duplicate",)
+                        help="directories want to find duplicate",)
     return finder.parse_args()
-    
+
 
 def scan_files(directory):
     base_path = os.path.abspath(directory)
@@ -24,29 +25,38 @@ def group_files_by_size(file_path_names):
     files_same_size = {}
     for file in file_path_names:
         files_same_size.setdefault(os.stat(file).st_size, []).append(file)
-    return [same_size for size, same_size in files_same_size.items() if len(same_size) > 1 and size]
+    return [group for size, group in files_same_size.items() if len(group) > 1 and size]
 
 
 def get_file_checksum(name_file):
     '''
     Task: return hash md5 of file passed
     '''
-    with open(file, 'rb') as f:
+    with open(name_file, 'rb') as f:
         return md5(f.read()).hexdigest()
-    
+
 
 def group_files_by_checksum(file_path_names):
     files_same_checksum = {}
     for file in file_path_names:
         checksum = get_file_checksum(file)
-        files_same_size.setdefault(checksum, []).append(file)
-    return [same_checksum for _, same_checksum in files_same_checksum.items() if len(same_checksum) > 1]
+        files_same_checksum.setdefault(checksum, []).append(file)
+    return [group for group in files_same_checksum.values() if len(group) > 1]
+
+
+def find_duplicate_files(file_path_names):
+    duplicate_files = []
+    for group_size in group_files_by_size(file_path_names):
+        for group in group_files_by_checksum(group_size):
+            duplicate_files.append(group)
+    return duplicate_files
 
 
 def main():
-    args = handle_args()
+    args = read_args()
     files = scan_files(args.path)
-    group_files_by_size()
+    duplicates = find_duplicate_files(files)
+
 
 if __name__ == "__main__":
     main()
