@@ -20,9 +20,11 @@ def scan_files(directory):
     '''
     base_path = os.path.abspath(directory)
     all_files = []
-    for root, dirs, files in os.walk(base_path):
+    for root, _, files in os.walk(base_path):
         for name in files:
-            all_files.append(os.path.join(root, name))
+            path = os.path.join(root, name)
+            if not os.path.islink(path):
+                all_files.append(path)
     return all_files
 
 
@@ -33,8 +35,9 @@ def group_files_by_size(file_path_names):
     '''
     files_same_size = {}
     for file in file_path_names:
-        files_same_size.setdefault(os.stat(file).st_size, []).append(file)
-    return [group for size, group in files_same_size.items() if len(group) > 1 and size]
+        files_same_size.setdefault(os.path.getsize(file), []).append(file)
+    return [group for size, group in files_same_size.items()
+            if len(group) > 1 and size]
 
 
 def get_file_checksum(name_file):
@@ -72,15 +75,18 @@ def find_duplicate_files(file_path_names):
 
 def main():
     '''
-    Task:   - Get argument passed from user
+    Task:   - Get argument passed from user then check input is valid
             - Scan all of file inside that directory
             - Find duplicate files
             - Ouput a format expression json for duplicate files
     '''
     args = read_args()
+    if args.path and not os.path.isdir(args.path):
+        parser.print_help()
+        exit(1)
     files = scan_files(args.path or ".")
     duplicates = find_duplicate_files(files)
-    print(json.dumps(duplicates, sort_keys=True, indent=2))
+    print(json.dumps(duplicates, sort_keys=True, indent=4))
 
 
 if __name__ == "__main__":
