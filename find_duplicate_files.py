@@ -1,15 +1,15 @@
 #!/usr/bin/python3
 
 from hashlib import md5
-import os
+from os import path, walk
 from argparse import ArgumentParser
-import json
+from json import dumps
 
 
 def read_args():
     finder = ArgumentParser()
     finder.add_argument('-p', '--path',
-                        help="directories want to find duplicate",)
+                        help="directory want to find duplicate",)
     return finder.parse_args()
 
 
@@ -18,13 +18,13 @@ def scan_files(directory):
     Task:   - First get absolutely path passed
             - Scan file in dir, subdirs
     '''
-    base_path = os.path.abspath(directory)
+    base_path = path.abspath(directory)
     all_files = []
-    for root, _, files in os.walk(base_path):
+    for root, _, files in walk(base_path):
         for name in files:
-            path = os.path.join(root, name)
-            if not os.path.islink(path):
-                all_files.append(path)
+            path_name = path.join(root, name)
+            if not path.islink(path_name):
+                all_files.append(path_name)
     return all_files
 
 
@@ -35,7 +35,7 @@ def group_files_by_size(file_path_names):
     '''
     files_same_size = {}
     for file in file_path_names:
-        files_same_size.setdefault(os.path.getsize(file), []).append(file)
+        files_same_size.setdefault(path.getsize(file), []).append(file)
     return [group for size, group in files_same_size.items()
             if len(group) > 1 and size]
 
@@ -51,12 +51,16 @@ def get_file_checksum(name_file):
 def group_files_by_checksum(file_path_names):
     '''
     Task:   - Checksum each file, checksum will be key and file append in list
+            - If don't have permisson to read then ignore that file
             - Take group have more than 1 file
     '''
     files_same_checksum = {}
     for file in file_path_names:
-        checksum = get_file_checksum(file)
-        files_same_checksum.setdefault(checksum, []).append(file)
+        try:
+            checksum = get_file_checksum(file)
+            files_same_checksum.setdefault(checksum, []).append(file)
+        except PermissionError:
+            pass
     return [group for group in files_same_checksum.values() if len(group) > 1]
 
 
@@ -81,12 +85,12 @@ def main():
             - Ouput a format expression json for duplicate files
     '''
     args = read_args()
-    if args.path and not os.path.isdir(args.path):
-        parser.print_help()
+    if args.path and not path.isdir(args.path):
+        print("Invalid path")
         exit(1)
     files = scan_files(args.path or ".")
     duplicates = find_duplicate_files(files)
-    print(json.dumps(duplicates, sort_keys=True, indent=4))
+    print(dumps(duplicates, sort_keys=True, indent=4))
 
 
 if __name__ == "__main__":
